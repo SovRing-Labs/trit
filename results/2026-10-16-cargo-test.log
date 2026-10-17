@@ -1,0 +1,16 @@
+# 2026-10-16 · Intel i5-8365U laptop · cargo 1.98.0 · cargo test --release (portable build: AVX2 test compiled out)
+running 2 tests
+test tests::p2_pack_unpack_scalar ... ok
+test tests::p3_roundtrip ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+# RUSTFLAGS='-C target-cpu=native' cargo test --release (AVX2 build; before the 2026-10-16 fix this did not compile: 93 E0425 + 12 E0133 errors)
+running 3 tests
+test tests::p2_avx2_exact ... ok
+test tests::p3_roundtrip ... ok
+test tests::p2_pack_unpack_scalar ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

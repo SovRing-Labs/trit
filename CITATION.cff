@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "trit: integer-only packed ternary weights, bit-identical across SIMD back-ends"
+version: 0.1.0
+date-released: 2026-10-16
+abstract: "Packed ternary weight formats (P2: 4 trits per byte for run time; P3: 5 trits per byte in base 3, 1.6 bits per weight; L5: compute directly on P3 codes through 243-entry partial-sum tables) with integer-only kernels for scalar C, AVX2, AVX-512 and NEON selected at run time, all bit-identical to a scalar arbiter, in a C++ header and a Rust crate. Pre-alpha. Published as defensive prior art."
+authors:
+  - family-names: "De Santiago"
+    given-names: "Juan Carlos"
+repository-code: "https://github.com/SovRing-Labs/trit"
+license:
+  - Apache-2.0
+  - CC-BY-4.0
+keywords: [ternary weights, balanced ternary, quantization, SIMD, AVX2, bit-identical, BitNet]

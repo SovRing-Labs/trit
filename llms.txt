@@ -1,0 +1,20 @@
+# trit
+
+> Packed ternary weights (P2 4 trits/byte, P3 1.6 bits/weight, L5 compute on storage) with integer-only kernels that are bit-identical on scalar, AVX2, AVX-512 and NEON, in C++ and Rust.
+
+Setup: `git clone --depth 1 https://github.com/SovRing-Labs/trit && cd trit && g++ -O3 -march=native -fopenmp -std=c++17 -Icpp tests/trit_kernel_test.cpp -o /tmp/trit_kernel_test && /tmp/trit_kernel_test | tail -1` (expect: "pass": true).
+Status: pre-alpha, under development — read STATUS.md before relying on a number.
+Licence: Apache-2.0 (code) + CC BY 4.0 (documents).
+
+## Docs
+- [README.md](https://raw.githubusercontent.com/SovRing-Labs/trit/main/README.md)
+- [STATUS.md](https://raw.githubusercontent.com/SovRing-Labs/trit/main/STATUS.md)
+- [suite.json](https://raw.githubusercontent.com/SovRing-Labs/trit/main/suite.json)
+- [TECHNICAL-DISCLOSURE.md](https://raw.githubusercontent.com/SovRing-Labs/trit/main/TECHNICAL-DISCLOSURE.md)
+- [PROVENANCE.md](https://raw.githubusercontent.com/SovRing-Labs/trit/main/PROVENANCE.md)
+- [LICENSING.md](https://raw.githubusercontent.com/SovRing-Labs/trit/main/LICENSING.md)
+- [CITATION.cff](https://raw.githubusercontent.com/SovRing-Labs/trit/main/CITATION.cff)
+- [AGENTS.md](https://raw.githubusercontent.com/SovRing-Labs/trit/main/AGENTS.md)
+
+## Optional
+- [SovRing umbrella (all repos, MCP setup)](https://github.com/SovRing-Labs/SovRing)

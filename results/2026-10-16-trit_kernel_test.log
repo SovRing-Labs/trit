@@ -1,0 +1,8 @@
+# 2026-10-16 · Intel i5-8365U laptop (AVX2, no AVX-512) · g++ -O3 -march=native -fopenmp -std=c++17 -Icpp tests/trit_kernel_test.cpp
+backend            ms         MB/s  vs scalar
+scalar         29.923       140.17
+avx2            4.085      1026.87      7.33x
+avx512   not-runnable            -          -
+neon     not-runnable            -          -
+
+{"task": "TRIT-LIB-2","best_kernel": "avx2","law_cases_checked": 348, "law_mismatches": 0,"random_rows_requested": 1000000, "random_rows_checked": 2000000, "random_mismatches": 0,"bench_cols": 4096, "bench_rows": 4096,"backends": [{"name": "scalar", "compiled": 1, "runnable": 1, "checked": 1000174, "mismatches": 0},{"name": "avx2", "compiled": 1, "runnable": 1, "checked": 1000174, "mismatches": 0},{"name": "avx512", "compiled": 1, "runnable": 0, "checked": 0, "mismatches": 0},{"name": "neon", "compiled": 0, "runnable": 0, "checked": 0, "mismatches": 0}], "pass": true}

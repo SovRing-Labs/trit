@@ -1,0 +1,43 @@
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+# EMITTED FROM Omniglyph IR spec (TRIT-LIB-3)
+[package]
+name = "trit"
+version = "0.1.0"
+edition = "2021"
+description = "Packed ternary weights library (P2 runtime, P3 storage, L5 compute)"
+license = "Apache-2.0"
+repository = "https://github.com/jc/trit"
+categories = ["math", "simd", "machine-learning"]
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+
+[dev-dependencies]
+fastrand = "2.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+
+[lib]
+name = "trit"
+path = "src/lib.rs"
+
+# Benches
+[[bench]]
+name = "trit_bench"
+harness = false

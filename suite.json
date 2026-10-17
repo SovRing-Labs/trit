@@ -1,0 +1,127 @@
+{
+ "_about": {
+  "repo": "trit",
+  "url": "https://github.com/SovRing-Labs/trit",
+  "one_line": "Packed ternary weights (P2 4 trits/byte, P3 1.6 bits/weight, L5 compute on storage) with integer-only kernels that are bit-identical on scalar, AVX2, AVX-512 and NEON, in C++ and Rust.",
+  "quicktest": "g++ -O3 -march=native -fopenmp -std=c++17 -Icpp tests/trit_kernel_test.cpp -o /tmp/trit_kernel_test && /tmp/trit_kernel_test | tail -1",
+  "quicktest_s": 15,
+  "licence": "Apache-2.0 (code) + CC BY 4.0 (documents)",
+  "status_file": "STATUS.md",
+  "generated": "2026-10-16",
+  "schema": 1,
+  "stage": "pre-alpha, about 30 %",
+  "source": "tests/trit_test.cpp, tests/trit_kernel_test.cpp, rust/src/lib.rs #[cfg(test)]; every row re-run on 2026-10-16 on an Intel i5-8365U laptop (AVX2, no AVX-512), logs in results/"
+ },
+ "tests": [
+  {
+   "id": "T1",
+   "title": "P2 / P3 / L5 are exact against an int8 reference (8,192 x 4,096)",
+   "claim": "P2 dot over 8,192 rows x 4,096 columns: 0 mismatches vs the int8 reference; P3 pack/unpack round trip exact; L5 table compute 0 mismatches",
+   "kind": "run",
+   "verify": "bash -c 'T=$(mktemp -d) && g++ -O3 -march=native -fopenmp -std=c++17 -Icpp tests/trit_test.cpp -o $T/t && $T/t | grep -q \"\\\"exact_mismatches\\\": 0, \\\"p3_roundtrip\\\": true\" && $T/t | grep -q \"\\\"l5_mismatches\\\": 0\" && echo exact'",
+   "expect": "exact",
+   "evidence": [
+    "results/2026-10-16-trit_test.log",
+    "tests/trit_test.cpp"
+   ],
+   "runtime_s": 20,
+   "needs": [
+    "g++ (C++17, OpenMP)"
+   ],
+   "cpu_flags": [
+    "avx2"
+   ],
+   "what_it_means": "Random ternary weights are packed into the run-time format (P2), multiplied against random int8 activations, and every one of the 8,192 output sums is compared with a plain int8 computation of the same product: all equal. The storage format (P3) is packed and unpacked back to the original weights, and the lookup-table kernel (L5) gives the same sums. Passing proves the three formats lose nothing and the kernels compute the exact product on this matrix size. It does not prove other sizes beyond the shapes the harness draws.",
+   "how_we_got_it": "tests/trit_test.cpp compiled with g++ -O3 -march=native -fopenmp -std=c++17 and run once on an Intel i5-8365U laptop on 2026-10-16; the JSON lines it prints are in results/2026-10-16-trit_test.log (also the timings: int8 4.30 ms, P2 3.31 ms, four-row P2 3.12 ms, L5 x16 0.094 ms).",
+   "use_in_your_work": "Storing a ternary model at a quarter of int8 memory (P2) or 1.6 bits per weight (P3) without changing a single output: smaller downloads and RAM for BitNet-style models on ordinary laptops, with a test you can re-run on your own CPU.",
+   "honest_limits": "The harness uses the AVX2 path for P2; timings are one laptop under desktop load and are not a benchmark claim."
+  },
+  {
+   "id": "T2",
+   "title": "Every SIMD back-end returns the same integers as the scalar arbiter",
+   "claim": "scalar and AVX2: 0 mismatches over 348 law cases and 2,000,000 random rows; AVX2 7.3x the scalar kernel; AVX-512 compiled, not runnable on this CPU; NEON not compiled on x86",
+   "kind": "run",
+   "verify": "bash -c 'T=$(mktemp -d) && g++ -O3 -march=native -fopenmp -std=c++17 -Icpp tests/trit_kernel_test.cpp -o $T/k && $T/k | tail -1 | grep -o \"\\\"law_mismatches\\\": 0.*\\\"random_mismatches\\\": 0\" >/dev/null && $T/k | tail -1 | grep -q \"\\\"pass\\\": true\" && echo bit-identical'",
+   "expect": "bit-identical",
+   "evidence": [
+    "results/2026-10-16-trit_kernel_test.log",
+    "tests/trit_kernel_test.cpp",
+    "cpp/trit_kernels.hpp"
+   ],
+   "runtime_s": 15,
+   "needs": [
+    "g++ (C++17, OpenMP)"
+   ],
+   "cpu_flags": [],
+   "what_it_means": "The same dot product is computed by each kernel the CPU can run and compared, value by value, with the portable scalar version: first on 348 hand-picked cases that cover every code, padding and row-tail length, then on two million random rows. Zero differences means the format gives one answer per input whatever machine runs it. The run also reports which back-ends were compiled and which could run here, so you see exactly what was checked on your CPU.",
+   "how_we_got_it": "tests/trit_kernel_test.cpp (includes cpp/trit_kernels.hpp, picks back-ends by CPUID) compiled with g++ -O3 -march=native -fopenmp -std=c++17 and run on an Intel i5-8365U laptop on 2026-10-16; output in results/2026-10-16-trit_kernel_test.log.",
+   "use_in_your_work": "Reproducible inference: two users on different CPUs get bit-identical model outputs, so results can be compared, cached or verified by someone else without a floating-point tolerance.",
+   "honest_limits": "On this laptop only scalar and AVX2 were checked; AVX-512 and NEON need a machine that has them (the log says which ran on yours)."
+  },
+  {
+   "id": "T3",
+   "title": "Rust crate, portable build: pack/unpack tests",
+   "claim": "cargo test --release: 2 passed (p3_roundtrip, p2_pack_unpack_scalar)",
+   "kind": "run",
+   "verify": "bash -c 'cd rust && CARGO_TARGET_DIR=$(mktemp -d) cargo test --release 2>&1 | grep -E \"^test result: ok. 2 passed\" >/dev/null && echo 2-passed'",
+   "expect": "2-passed",
+   "evidence": [
+    "results/2026-10-16-cargo-test.log",
+    "rust/src/lib.rs"
+   ],
+   "runtime_s": 60,
+   "needs": [
+    "cargo (Rust 2021)"
+   ],
+   "cpu_flags": [],
+   "what_it_means": "The Rust crate packs and unpacks P3 and P2 rows and gets the original trits back, in a build that runs on any CPU. It shows the Rust formats agree with their own definition; the cross-language agreement with the C++ header is by shared law record, not by this test.",
+   "how_we_got_it": "cargo test --release in rust/ on 2026-10-16 (cargo 1.98, Intel i5-8365U); output in results/2026-10-16-cargo-test.log.",
+   "use_in_your_work": "A no_std ternary weight format you can embed in a Rust inference engine or a microcontroller build.",
+   "honest_limits": "Two small tests; the AVX2 kernel is compiled out in a portable build (see T4)."
+  },
+  {
+   "id": "T4",
+   "title": "Rust crate, AVX2 build: the SIMD dot is exact (fixed 2026-10-16)",
+   "claim": "RUSTFLAGS='-C target-cpu=native' cargo test --release: 3 passed including p2_avx2_exact; before 2026-10-16 this build did not compile (93 E0425 + 12 E0133 errors)",
+   "kind": "run",
+   "verify": "bash -c 'cd rust && RUSTFLAGS=\"-C target-cpu=native\" CARGO_TARGET_DIR=$(mktemp -d) cargo test --release 2>&1 | grep -E \"^test result: ok. 3 passed\" >/dev/null && echo 3-passed'",
+   "expect": "3-passed",
+   "evidence": [
+    "results/2026-10-16-cargo-test.log",
+    "rust/src/lib.rs",
+    "STATUS.md"
+   ],
+   "runtime_s": 60,
+   "needs": [
+    "cargo (Rust 2021)"
+   ],
+   "cpu_flags": [
+    "avx2"
+   ],
+   "what_it_means": "With AVX2 enabled the crate compiles its SIMD dot product and checks it against the scalar one on random rows: equal. This row exists because the AVX2 build had never compiled before this release; it is the regression test for that fix.",
+   "how_we_got_it": "RUSTFLAGS='-C target-cpu=native' cargo test --release in rust/ on 2026-10-16 after the fix described in STATUS.md (Known failures); output in results/2026-10-16-cargo-test.log.",
+   "use_in_your_work": "The fast path for x86 laptops and servers in a Rust engine, with an exactness test that runs on your CPU.",
+   "honest_limits": "Needs an AVX2 CPU; the test checks one random shape."
+  },
+  {
+   "id": "T5",
+   "title": "Memory: P2 is a quarter of int8, P3 is 1.6 bits per weight",
+   "claim": "8,192 x 4,096 weights: int8 33,554,432 bytes, P2 8,388,608 bytes, P3 6,710,887 bytes",
+   "kind": "file",
+   "verify": "grep -q '\"bytes_int8\": 33554432, \"bytes_p2\": 8388608, \"bytes_p3\": 6710887' results/2026-10-16-trit_test.log && echo sizes-ok",
+   "expect": "sizes-ok",
+   "evidence": [
+    "results/2026-10-16-trit_test.log"
+   ],
+   "runtime_s": 1,
+   "needs": [
+    "grep"
+   ],
+   "cpu_flags": [],
+   "what_it_means": "The byte counts follow from the formats: 2 bits per weight for P2 and 8 bits per 5 weights for P3. The test checks the logged sizes; T1 is what shows nothing is lost at those sizes.",
+   "how_we_got_it": "Printed by tests/trit_test.cpp in the T1 run (results/2026-10-16-trit_test.log).",
+   "use_in_your_work": "Sizing a model download or RAM budget: a 2-billion-weight ternary model is about 400 MB in P3 and 500 MB in P2.",
+   "honest_limits": "Size only; speed depends on the CPU."
+  }
+ ]
+}

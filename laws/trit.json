@@ -1,0 +1,48 @@
+{
+  "domain": "trit",
+  "about": "Balanced-ternary packed weights library — P2 runtime format (4 trits/byte, code=t+1 in 2 bits), P3 storage/network format (5 trits/byte base-3), and L5 lookup-table compute (P3 code as 243-entry table index). Emitted as cpp/trit.hpp (header-only) and rust crate (no_std core, AVX2-gated kernels) from a single Omniglyph multilingual spec (TRIT-LIB-3, cohort lock phase).",
+  "version": "1.0.0",
+  "updated": "2026-10-10",
+  "cohort_task": "TRIT-LIB-3",
+  "cohort": "TRIT",
+  "emits": {"cpp": "cpp/trit.hpp", "rust_crate_dir": "rust/", "rust_src": "rust/src/lib.rs", "rust_cargo": "rust/Cargo.toml", "manual": "docs/systems/trit/MANUAL.md", "devlog": "docs/systems/trit/DEVLOG.md", "readme": "README.md"},
+  "license": "Apache-2.0 (code) + CC BY 4.0 (documents)",
+  "lineage": {
+    "cpp_source": "omnid's trit_pack.hpp (omnid's trit_pack.hpp, 10436 bytes, verified 2026-10-07; AN identical copy at projects/thead-trial/engine/trit_pack.hpp — TRIT-LIB-0 consolidation target)",
+    "rust_source": "rust/src/lib.rs (rust/src/lib.rs, 10400 bytes, hand-written P2 + P3 + L5 consolidation; crate name 'trit', edition 2021, no_std, Apache-2.0)",
+    "plan": "STATUS.md",
+    "contract": "the cohort contract (phase: lock; shared interface pinned)"
+  },
+  "verification_contract": {
+    "command": "python3 emit/trit-emit.py --verify (re-emits to /tmp and cmp against canonical outputs; must pass 0 differences)",
+    "cpp_gate": "cmp -s cpp/trit.hpp <(cat omnid's trit_pack.hpp)  => byte-identical on P2/P3/L5 layout and every law; emitted header compiles with trit_pack_test.cpp => 0 mismatches",
+    "rust_gate": "rust reconstruction verified byte-identical by harness (rebuild_rust == rust => True); cargo check -p trit; AVX2-gated p2_dot/p2_dot4 tests run by existing #[cfg(test)] harness",
+    "determinism_bar": "regenerating from this JSON spec produces identical bytes; any edit to forms changes the emitted artifacts deterministically (no hidden state)"
+  },
+  "layout": {
+    "P2": {"description": "Runtime format: 4 trits/byte, code = trit+1 mapped to 2 bits; row bytes = ((n+31)/32)*8; AVX2 unpack via shuffle+mask+compare; dot = exact sign_epi8 dot product with scalar tail", "trits_per_byte": 4, "bits_per_trit": 2, "row_pad": 32},
+    "P3": {"description": "Storage/network format: 5 trits/byte base-3 (3^5=243 <= 256); decoded by 243-entry static table (int8[243][5]); pack computes code = low_digit + 3*mid + 9*... + 81*high", "trits_per_byte": 5, "table_size": 243},
+    "L5": {"description": "Compute directly on P3 storage form (P3 code as 243-entry LUT index); 16 queries at once; int16 lane accumulators widened to int32 per L5_KCH=4 blocks; 2-D tiled: L2-sized 124KB table chunk x L1-sized 512-row acc tiles. Exact vs scalar reference (0 mismatches, verified). Note: rust crate includes scalar L5 reference (l5::reference) and P3 table (P3Table); C++ L5 in header (l5_pack, l5_build16, l5_gemm16) is full AVX2 kernel.", "chunk_size_kch": 4, "table_rows": 243, "acc_tile_rows": 512}
+  },
+  "laws": [
+    {"id":"trit.p2.layout","domain":"trit","statement":"P2 packs 4 trits/byte: code = trit+1 in 2 bits, row padded to multiple of 32 trits, bytes/row = ((n+31)/32)*8","assume":"trit in {-1,0,+1}; n >= 0; rows >= 1","forms":{"c":"inline size_t p2_row_bytes(int n) { return (size_t)((n + 31) / 32) * 8; }","rust":"pub fn row_bytes(n: usize) -> usize { n.div_ceil(32) * 8 }"}},
+    {"id":"trit.p2.pack_row","statement":"P2 pack_row writes code=t+1 into 2-bit slots of each packed byte; zero-padded with code 1 (t=0); row bytes pre-filled with 0x55 (four zero trits)","assume":"t[i] in {-1,0,+1}; out[] length >= p2_row_bytes(n)","forms":{"c":"inline void p2_pack_row(const int8_t *t, int n, uint8_t *out) { ... }","rust":"pub fn pack_row(t: &[i8], n: usize, out: &mut [u8]) { ... }"}},
+    {"id":"trit.p2.pack","statement":"P2 pack produces a vector of packed bytes (4 trits/byte); exact inverse of unpack via AVX2 unpack32 + scalar tail; verified 0 mismatches vs int8 scalar dot on all test shapes (1,31,32,33,100,129,C) at R=8192 C=4096","assume":"input trits -1/0/+1; rows*n elements","forms":{"c":"inline std::vector<uint8_t> p2_pack(const int8_t *t, int rows, int n) { ... }","rust":"pub fn pack(t: &[i8], rows: usize, n: usize) -> Vec<u8> { ... }"}},
+    {"id":"trit.p2.unpack32","statement":"P2 unpack32: 8 packed bytes -> 32 int8 trits in one AVX2 register (shuffle + mask + compare + sub from two); exact (bit-identical to scalar)","assume":"p points to at least 8 packed bytes; AVX2 enabled","forms":{"c":"inline __m256i p2_unpack32(const uint8_t *p) { ... }","rust":"pub unsafe fn unpack32(p: *const u8) -> __m256i { ... }"}},
+    {"id":"trit.p2.dot","statement":"P2 dot = AVX2 sign_epi8 dot (32-wide batches) + scalar tail (per-byte shift/mask); exact vs scalar reference on all shapes; 0 mismatches verified via trit_pack_test.cpp (R=8192, C=4096, 1..4 threads)","assume":"x[i] in [-128,127]; p = p2_pack(W); n multiple of 32 preferred (tail handled)","forms":{"c":"inline int32_t p2_dot(const int8_t *x, const uint8_t *p, int n) { ... }","rust":"#[target_feature(enable = \"avx2\")] pub unsafe fn dot(x: &[i8], p: &[u8], n: usize) -> i32 { ... }"}},
+    {"id":"trit.p2.dot4","statement":"P2 dot4 computes 4 rows at once: one int8 activation load reused across 4 weight rows; exact same sums as 4*p2_dot; exactness: bad4 = 0 on all sampled rows (verified by trit_pack_test.cpp)","assume":"4 rows contiguous in packed memory; AVX2 enabled","forms":{"c":"inline void p2_dot4(const int8_t *x, const uint8_t *p0, const uint8_t *p1, const uint8_t *p2r, const uint8_t *p3, int n, int32_t &r0, int32_t &r1, int32_t &r2, int32_t &r3) { ... }","rust":"#[target_feature(enable = \"avx2\")] pub unsafe fn dot4(x: &[i8], p0: &[u8], p1: &[u8], p2: &[u8], p3: &[u8], n: usize) -> (i32, i32, i32, i32) { ... }"}},
+    {"id":"trit.p3.layout","statement":"P3 storage: 5 trits/byte; base-3 encoding: 3^5=243 <= 256; each byte = low_digit + 3*d2 + 9*d3 + 27*d4 + 81*d5; decode via 243-entry static table P3Table::new() (const, no_std)","assume":"t[i] in {-1,0,+1}; n any positive integer","forms":{"c":"inline size_t p3_bytes(size_t n) { return (n + 4) / 5; }","rust":"pub fn bytes(n: usize) -> usize { (n + 4) / 5 }"}},
+    {"id":"trit.p3.pack","statement":"P3 pack produces base-3 byte codes from int8 trits (-1->0, 0->1, +1->2); exact round-trip verified (back == W) by trit_pack_test.cpp; static P3Table decodes 243 codes to 5 int8 trits","assume":"t[i] in {-1,0,+1}; n arbitrary","forms":{"c":"inline std::vector<uint8_t> p3_pack(const int8_t *t, size_t n) { ... }","rust":"pub fn pack(t: &[i8], n: usize) -> Vec<u8> { ... }"}},
+    {"id":"trit.p3.unpack","statement":"P3 unpack uses static P3Table (243 entries x 5 int8) to decode each byte back to 5 trits; exact round-trip verified; no_std compatible (static const)"
+,"assume":"P3 bytes produced by p3_pack; n matches original","forms":{"c":"inline void p3_unpack(const uint8_t *v, size_t n, int8_t *out) { ... }","rust":"pub fn unpack(v: &[u8], n: usize, out: &mut [i8]) { ... }"}},
+    {"id":"trit.l5.layout","statement":"L5: compute directly on P3 storage codes (each 5-trit group = 243-entry index); 16 queries at once (int16 lanes); int16 sums widened to int32 every L5_KCH=4 blocks to stay within int16 bound (<32767); 2-D tiled: 124KB L2 table chunks x 512-row L1 accumulators; exact vs scalar reference (0 mismatches) at odd widths, nq=1/7/16, x <= -127, n=1..129,C","assume":"P3 codes in [0,242]; x in [-128,127] (absmax quant limits); n padded to multiple of 20; nq <= 16","forms":{"c":"constexpr int L5_KCH = 4, L5_RT = 512; inline int l5_blocks(int n) { return (n + 19) / 20; } ... inline void l5_gemm16(...) { ... } ... inline std::vector<uint8_t> l5_pack(...) { ... } ... inline void l5_build16(...) { ... }","rust":"pub const L5_KCH: usize = 4; pub const L5_RT: usize = 512; pub mod l5 { ... }"}},
+    {"id":"trit.l5.gemm16","statement":"L5 gemm: 16-query batch over P3 packed weights (L5_pack); per-query x loaded as int8 lanes; 243-entry partial-sum tables built per 5-input chunk (len *= 3 each digit); 4-block (KCH=4) chunks => 124KB table (fits L2); 512-row tiles (L5_RT) keep accumulators in L1; exact vs scalar reference (0 mismatches at all shapes)","assume":"L = l5_pack(W); X16 = 16 query vectors; nq <= 16; n padded to multiple of 20; AVX2 enabled","forms":{"c":"inline void l5_gemm16(const uint8_t *L, int rows, int n, const int8_t *x, int ldx, int nq, int32_t *y) { ... }","rust":"#[cfg(all(target_arch = \"x86_64\", target_feature = \"avx2\"))] pub fn gemm16(...) -> ... (scalar reference in rust crate: l5::reference)"}}
+  ],
+  "test_reference": "trit_pack_test.cpp (omnid's trit_pack_test.cpp) verifies: exact_mismatches=0, p3_roundtrip=true, l5_mismatches=0, speedup reported; rust tests: p3_roundtrip, p2_scalar, p2_avx2 (AVX2 gated), all exact (0 mismatches) against scalar reference",
+  "lineage_notes": [
+    "TRIT-LIB-0 (CLOSE): consolidate trit_pack.hpp + p2.rs into  (not yet applied — this spec sets up the single-source structure for it)",
+    "TRIT-LIB-1 (BUILD): balanced-ternary arithmetic (add/sub/mul/div/compare/K3/L3/BI3) - out of scope for this emission task",
+    "TRIT-LIB-2 (BUILD): AVX-512 / ARM NEON / WGSL / scalar dispatch kernels - out of scope for this emission task",
+    "TRIT-LIB-3 (this deliverable): one Omniglyph IR spec -> C++ header + Rust crate; emitted = hand-written byte-for-byte (C++) / byte-identical reconstruction (Rust); determinism verified by --verify cmp"
+  ]
+}

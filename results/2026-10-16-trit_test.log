@@ -1,0 +1,3 @@
+# 2026-10-16 · Intel i5-8365U laptop (AVX2, no AVX-512) · g++ 13.3.0 · g++ -O3 -march=native -fopenmp -std=c++17 -Icpp tests/trit_test.cpp
+{"l5_mismatches": 0, "bytes_l5": 6710887, "ms_l5x16_1thr": 0.130, "ms_p2x4x16": 3.826, "speedup_l5_vs_p2x4": 29.49}
+{"rows": 8192, "cols": 4096, "threads": 1, "exact_mismatches": 0, "p3_roundtrip": true, "bytes_int8": 33554432, "bytes_p2": 8388608, "bytes_p3": 6710887, "ms_int8": 4.884, "ms_p2": 4.125, "speedup_p2": 1.18, "GBps_int8": 6.87, "ms_p2x4": 3.826, "speedup_p2x4": 1.28, "pass": true}
